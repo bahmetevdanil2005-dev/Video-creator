@@ -63,42 +63,60 @@ function drawScene(
   }
   ctx.restore();
 
-  const cx = width * 0.73;
-  const cy = height * (0.34 + Math.sin(progress * Math.PI * 2) * 0.025);
-  const radius = Math.min(width, height) * 0.13;
-  const glow = ctx.createRadialGradient(cx - radius * 0.35, cy - radius * 0.4, 2, cx, cy, radius);
-  glow.addColorStop(0, '#ffffff');
-  glow.addColorStop(0.25, accent);
-  glow.addColorStop(1, '#30234f');
-  ctx.save();
-  ctx.shadowColor = accent;
-  ctx.shadowBlur = radius * 0.55;
-  ctx.fillStyle = glow;
-  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
-  ctx.restore();
-
-  ctx.save();
-  ctx.translate(cx, cy);
-  ctx.rotate(progress * 0.45);
-  ctx.strokeStyle = accent + '99';
-  ctx.lineWidth = Math.max(2, width * 0.002);
-  ctx.beginPath();
-  ctx.ellipse(0, 0, radius * 1.7, radius * 0.52, -0.35, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-
-  if (scene.visual === 'bars') {
-    [0.12, 0.22, 0.16, 0.29, 0.2, 0.34, 0.25].forEach((value, bar) => {
-      const barWidth = width * 0.025;
-      const barHeight = height * value * (0.82 + 0.18 * Math.sin(progress * 5 + bar));
-      const x = width * 0.5 + bar * barWidth * 1.5;
-      const y = height * 0.65 - barHeight;
-      const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
-      gradient.addColorStop(0, accent);
-      gradient.addColorStop(1, '#ffffff22');
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, y, barWidth, barHeight);
-    });
+  if (photo) {
+    const zoom = 1.04 + progress * 0.13;
+    const pan = (index % 2 === 0 ? 1 : -1) * progress * photo.naturalWidth * 0.035;
+    const scale = Math.max(width / photo.naturalWidth, height / photo.naturalHeight) * zoom;
+    const sw = width / scale;
+    const sh = height / scale;
+    const sx = Math.max(0, Math.min(photo.naturalWidth - sw, (photo.naturalWidth - sw) / 2 + pan));
+    const sy = (photo.naturalHeight - sh) / 2;
+    ctx.save();
+    ctx.globalAlpha = 1;
+    ctx.drawImage(photo, sx, sy, sw, sh, 0, 0, width, height);
+    ctx.restore();
+    const shade = ctx.createLinearGradient(0, 0, 0, height);
+    shade.addColorStop(0, '#05070b88');
+    shade.addColorStop(0.38, '#05070b22');
+    shade.addColorStop(1, '#05070bee');
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, width, height);
+  } else {
+    const layouts = [
+      { x: 0.72, y: 0.28, r: 0.17, shape: 'circle' },
+      { x: 0.70, y: 0.32, r: 0.20, shape: 'rect' },
+      { x: 0.76, y: 0.27, r: 0.15, shape: 'bars' },
+      { x: 0.68, y: 0.34, r: 0.18, shape: 'line' },
+      { x: 0.75, y: 0.3, r: 0.19, shape: 'diamond' },
+      { x: 0.7, y: 0.29, r: 0.16, shape: 'rings' },
+      { x: 0.73, y: 0.32, r: 0.18, shape: 'triangle' },
+    ];
+    const layout = layouts[index % layouts.length];
+    const x = width * layout.x;
+    const y = height * layout.y;
+    const size = Math.min(width, height) * layout.r;
+    ctx.save();
+    ctx.fillStyle = accent + '33';
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = Math.max(3, width * 0.006);
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = size * 0.45;
+    if (layout.shape === 'circle') {
+      ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    } else if (layout.shape === 'rect') {
+      ctx.translate(x, y); ctx.rotate(-0.16); ctx.fillRect(-size, -size, size * 2, size * 2); ctx.strokeRect(-size, -size, size * 2, size * 2);
+    } else if (layout.shape === 'bars') {
+      for (let n = 0; n < 5; n++) { const h = size * (0.35 + ((n * 7 + index * 3) % 9) / 12); ctx.fillRect(x - size + n * size * 0.42, y + size - h, size * 0.24, h); }
+    } else if (layout.shape === 'line') {
+      ctx.beginPath(); ctx.moveTo(x - size, y + size * 0.5); ctx.lineTo(x - size * 0.35, y - size * 0.7); ctx.lineTo(x + size * 0.2, y + size * 0.15); ctx.lineTo(x + size, y - size); ctx.stroke();
+    } else if (layout.shape === 'diamond') {
+      ctx.translate(x, y); ctx.rotate(Math.PI / 4); ctx.fillRect(-size * 0.7, -size * 0.7, size * 1.4, size * 1.4); ctx.strokeRect(-size * 0.7, -size * 0.7, size * 1.4, size * 1.4);
+    } else if (layout.shape === 'rings') {
+      for (let n = 1; n <= 4; n++) { ctx.beginPath(); ctx.arc(x, y, size * n / 4, 0, Math.PI * 2); ctx.stroke(); }
+    } else {
+      ctx.beginPath(); ctx.moveTo(x, y - size); ctx.lineTo(x + size, y + size); ctx.lineTo(x - size, y + size); ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
   }
 
   const pad = width * 0.085;
@@ -146,6 +164,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
     if (urlRef.current) URL.revokeObjectURL(urlRef.current);
 
     try {
+      if (scenes.some(scene => !scene.imageUrl)) throw new Error('Сначала найди фотографии для всех сцен. Видео без тематических материалов не будет собрано.');
       if (!('MediaRecorder' in window) || !HTMLCanvasElement.prototype.captureStream) {
         throw new Error('Запись видео не поддерживается этим браузером. Обнови Safari и попробуй ещё раз.');
       }
@@ -244,7 +263,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
       )}
       {message && !rendering && <p className="export-message" role="status">{message}</p>}
       {videoUrl && !rendering && <a className="download-video" href={videoUrl} download={fileName}><Download size={16} /> Скачать {fileName.endsWith('.mp4') ? 'MP4' : 'WEBM'}</a>}
-      <p className="export-hint">Видео собирается с найденными фотографиями, если они добавлены. Озвучки пока нет. Во время рендеринга не сворачивай Safari. Если загрузка не начнётся, открой видео и выбери «Поделиться» → «Сохранить в Файлы».</p>
+      <p className="export-hint">Экспорт использует отдельную фотографию каждой сцены и движение камеры. Озвучки пока нет. Во время рендеринга не сворачивай Safari. Если загрузка не начнётся, открой видео и выбери «Поделиться» → «Сохранить в Файлы».</p>
     </section>
   );
 }
