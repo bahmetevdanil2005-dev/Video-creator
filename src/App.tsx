@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Aperture, ArrowDownToLine, Check, ChevronDown, Clapperboard, Clock3, Film, Layers3, Plus, Ratio, Settings2, Sparkles, WandSparkles } from 'lucide-react';
 import Preview from './components/Preview';
+import VideoExport from './components/VideoExport';
 import { createStoryboard } from './lib/storyboard';
 import type { AspectRatio, Scene, VideoSettings, VisualStyle } from './types';
 
@@ -22,7 +23,7 @@ export default function App() {
     }
     setScenes(createStoryboard(settings));
     setActiveScene(0);
-    setNotice('Раскадровка создана. Сейчас это демонстрационный режим без подключения AI.');
+    setNotice('Раскадровка обновлена. Можно переходить к сборке видео.');
   }
 
   function exportConcept() {
@@ -82,7 +83,7 @@ export default function App() {
           <section className="scenes-section">
             <div className="scenes-heading"><div><span className="eyebrow">ШАГ 02</span><h2>Сцены проекта <span className="muted">({scenes.length})</span></h2></div><button className="subtle-button" onClick={exportConcept}><ArrowDownToLine size={15} /> Экспорт структуры</button></div>
             <div className="scene-list">{scenes.map((scene, index) => <button className={activeScene === index ? 'scene-row scene-selected' : 'scene-row'} key={scene.id} onClick={() => setActiveScene(index)}><span className="scene-index">0{scene.id}</span><span className="scene-info"><strong>{scene.title}</strong><small>{scene.description}</small></span><span className="scene-time"><Clock3 size={13} /> {scene.duration} сек.</span><span className="scene-check">{activeScene === index ? <Check size={15} /> : <Plus size={15} />}</span></button>)}</div>
-            <div className="next-step"><div className="next-icon"><Film size={18} /></div><div><strong>Следующий этап — анимация и рендеринг</strong><p>Подключим движок, чтобы превращать сцены в настоящее видео MP4.</p></div><span className="coming-soon">СКОРО</span></div>
+            <VideoExport scenes={scenes} ratio={settings.aspectRatio} style={settings.style} />
           </section>
           <footer className="footer"><span>VIDEO-CREATOR <span className="muted">·</span> 0.1.0</span><span>Создаём по шагам. Без платных API.</span></footer>
         </section>
