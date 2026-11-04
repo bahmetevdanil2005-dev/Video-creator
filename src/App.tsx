@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Aperture, ArrowDownToLine, Check, ChevronDown, Clapperboard, Clock3, Film, Layers3, Plus, Ratio, Settings2, Sparkles, WandSparkles } from 'lucide-react';
 import Preview from './components/Preview';
 import { createStoryboard } from './lib/storyboard';
@@ -13,7 +13,6 @@ export default function App() {
   const [generated, setGenerated] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
   const [notice, setNotice] = useState('');
-  const totalDuration = useMemo(() => scenes.reduce((sum, scene) => sum + scene.duration, 0), [scenes]);
 
   const update = <K extends keyof VideoSettings>(key: K, value: VideoSettings[K]) => setSettings(current => ({ ...current, [key]: value }));
 
