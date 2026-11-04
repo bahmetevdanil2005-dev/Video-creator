@@ -18,11 +18,6 @@ const PALETTES: Record<VisualStyle, [string, string, string]> = {
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value));
 const easeOut = (value: number) => 1 - Math.pow(1 - clamp(value), 3);
 
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath();
-  ctx.roundRect(x, y, w, h, r);
-}
-
 function drawWrappedText(
   ctx: CanvasRenderingContext2D,
   text: string,
@@ -156,9 +151,7 @@ function drawScene(
   ctx.globalAlpha = enter;
   ctx.fillStyle = accent;
   ctx.font = `700 ${Math.max(17, width * 0.019)}px Arial, sans-serif`;
-  ctx.letterSpacing = `${Math.max(2, width * 0.003)}px`;
   ctx.fillText(`VIDEO CREATOR   /   0${index + 1}`, pad, height * 0.58);
-  ctx.letterSpacing = '0px';
   ctx.shadowColor = '#00000099';
   ctx.shadowBlur = width * 0.025;
   ctx.fillStyle = '#ffffff';
