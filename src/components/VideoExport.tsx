@@ -125,9 +125,11 @@ function drawScene(
   ctx.restore();
 
   // A large outlined graphic anchors the composition.
-  const cx = width * (0.77 + Math.sin(drift) * 0.012);
-  const cy = height * 0.29;
-  const radius = Math.min(width, height) * (0.12 + 0.012 * Math.sin(drift * 1.7));
+  const visual = scene.visual || 'photo-pan';
+  const graphicLeft = visual === 'photo-split' || visual === 'photo-detail';
+  const cx = width * (graphicLeft ? 0.22 : 0.77 + Math.sin(drift) * 0.012);
+  const cy = height * (visual === 'photo-wide' ? 0.22 : visual === 'photo-detail' ? 0.34 : 0.29);
+  const radius = Math.min(width, height) * (visual === 'photo-detail' ? 0.17 : 0.12 + 0.012 * Math.sin(drift * 1.7));
   ctx.save();
   ctx.translate(cx, cy);
   ctx.rotate(drift * 0.4);
@@ -144,9 +146,36 @@ function drawScene(
   ctx.beginPath(); ctx.arc(0, 0, radius * 0.7, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 
+  // Each scene role changes the composition, not just its copy.
+  if (visual === 'photo-split') {
+    ctx.save();
+    ctx.fillStyle = accent + '22';
+    ctx.fillRect(width * 0.53, 0, width * 0.47, height);
+    ctx.strokeStyle = accent + 'aa';
+    ctx.lineWidth = Math.max(2, width * 0.003);
+    ctx.beginPath(); ctx.moveTo(width * 0.53, height * 0.12); ctx.lineTo(width * 0.53, height * 0.88); ctx.stroke();
+    ctx.restore();
+  } else if (visual === 'photo-detail') {
+    ctx.save();
+    ctx.strokeStyle = accent + 'bb';
+    ctx.lineWidth = Math.max(2, width * 0.003);
+    const bx = width * 0.59, by = height * 0.11, bw = width * 0.3, bh = height * 0.37, corner = width * 0.045;
+    for (const [x, y, sx, sy] of [[bx,by,1,1],[bx+bw,by,-1,1],[bx,by+bh,1,-1],[bx+bw,by+bh,-1,-1]] as const) {
+      ctx.beginPath(); ctx.moveTo(x + sx * corner, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * corner); ctx.stroke();
+    }
+    ctx.restore();
+  } else if (visual === 'photo-wide') {
+    ctx.save();
+    ctx.fillStyle = accent + '20';
+    ctx.fillRect(0, height * 0.12, width, height * 0.08);
+    ctx.fillRect(0, height * 0.8, width, height * 0.08);
+    ctx.restore();
+  }
+
   const pad = width * 0.085;
-  const titleSize = Math.max(44, width * 0.078);
-  const titleY = height * 0.68 + (1 - enter) * height * 0.045;
+  const titleSize = Math.max(44, width * (visual === 'photo-focus' ? 0.09 : 0.078));
+  const titleX = visual === 'photo-slide' ? pad + Math.sin(p * Math.PI / 2) * width * 0.035 : pad;
+  const titleY = (visual === 'photo-zoom' ? height * 0.59 : visual === 'photo-focus' ? height * 0.64 : height * 0.68) + (1 - enter) * height * 0.045;
   ctx.save();
   ctx.globalAlpha = enter;
   ctx.fillStyle = accent;
@@ -156,11 +185,11 @@ function drawScene(
   ctx.shadowBlur = width * 0.025;
   ctx.fillStyle = '#ffffff';
   ctx.font = `800 ${titleSize}px Arial, sans-serif`;
-  const titleLines = drawWrappedText(ctx, scene.title, pad, titleY, width * 0.82, titleSize * 1.08, 2);
+  const titleLines = drawWrappedText(ctx, scene.title, titleX, titleY, width * 0.82, titleSize * 1.08, 2);
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#e4e0ee';
   ctx.font = `400 ${Math.max(20, width * 0.027)}px Arial, sans-serif`;
-  drawWrappedText(ctx, scene.description, pad, titleY + titleLines * titleSize * 1.08 + height * 0.025, width * 0.78, Math.max(27, width * 0.034), 3);
+  drawWrappedText(ctx, scene.description, titleX, titleY + titleLines * titleSize * 1.08 + height * 0.025, width * 0.78, Math.max(27, width * 0.034), 3);
   ctx.restore();
 
   // Progress marker and scene counter.
@@ -172,10 +201,11 @@ function drawScene(
   ctx.font = `600 ${Math.max(15, width * 0.016)}px Arial, sans-serif`;
   ctx.fillText(`SCENE 0${index + 1}   /   0${sceneCount}`, pad, height * 0.975);
 
-  // Brief cinematic fade at each scene boundary.
-  const edgeFade = Math.min(1, p * 8 + 0.12, (1 - p) * 8 + 0.12);
-  ctx.fillStyle = `rgba(4, 5, 12, ${Math.max(0, 1 - edgeFade) * 0.72})`;
-  ctx.fillRect(0, 0, width, height);
+  // A short accent flash marks the cut without dipping every scene to black.
+  if (index > 0 && p < 0.035) {
+    ctx.fillStyle = accent + `${Math.round((1 - p / 0.035) * 20).toString(16).padStart(2, '0')}`;
+    ctx.fillRect(0, 0, width, height);
+  }
 }
 
 export default function VideoExport({ scenes, ratio, style }: VideoExportProps) {
