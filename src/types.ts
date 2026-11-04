@@ -19,4 +19,5 @@ export interface Scene {
   imageTitle?: string;
   imagePage?: string;
   imageCredit?: string;
+  imageQuery?: string;
 }
