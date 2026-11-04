@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Image, LoaderCircle, RefreshCw, Search, ExternalLink } from 'lucide-react';
 import type { Scene } from '../types';
 
@@ -75,11 +75,7 @@ export default function MediaLibrary({ scenes, onUpdate }: Props) {
     setLoading(false);
   }
 
-  useEffect(() => {
-    if (scenes.some(scene => !scene.imageUrl)) void searchAll();
-  // Load the first batch when the storyboard is created.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenes.map(scene => scene.id + ':' + (scene.imageUrl ? '1' : '0')).join('|')]);
+
 
   const ready = scenes.filter(scene => scene.imageUrl).length;
   return (
@@ -96,7 +92,7 @@ export default function MediaLibrary({ scenes, onUpdate }: Props) {
         </article>)}
       </div>
       <div className="media-library-footer">
-        <span>{status || 'Изображения подбираются автоматически.'}</span>
+        <span>{status || 'Нажми «Найти фотографии», чтобы подобрать реальные изображения.'}</span>
         <button onClick={searchAll} disabled={loading || ready === scenes.length}><Search size={14} /> {loading ? 'Ищем…' : 'Найти фотографии'}</button>
       </div>
     </section>
