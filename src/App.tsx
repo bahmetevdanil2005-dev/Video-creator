@@ -10,7 +10,6 @@ export default function App() {
   const [settings, setSettings] = useState<VideoSettings>(initialSettings);
   const [scenes, setScenes] = useState<Scene[]>(() => createStoryboard({ ...initialSettings, prompt: 'Технологии меняют наше будущее' }));
   const [activeScene, setActiveScene] = useState(0);
-  const [generated, setGenerated] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
   const [notice, setNotice] = useState('');
 
@@ -23,7 +22,6 @@ export default function App() {
     }
     setScenes(createStoryboard(settings));
     setActiveScene(0);
-    setGenerated(true);
     setNotice('Раскадровка создана. Сейчас это демонстрационный режим без подключения AI.');
   }
 
