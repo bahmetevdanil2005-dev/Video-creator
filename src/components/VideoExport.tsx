@@ -185,11 +185,29 @@ function drawScene(
   ctx.shadowBlur = width * 0.025;
   ctx.fillStyle = '#ffffff';
   ctx.font = `800 ${titleSize}px Arial, sans-serif`;
-  const titleLines = drawWrappedText(ctx, scene.title, titleX, titleY, width * 0.82, titleSize * 1.08, 2);
+  const titleBlockWidth = width * 0.82;
+  const titleLineHeight = titleSize * 1.08;
+  // Kinetic reveal: the title is wiped on with a moving accent edge.
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(titleX, titleY - titleSize, titleBlockWidth * easeOut(p / 0.42), titleLineHeight * 2.2);
+  ctx.clip();
+  const measuredLines = drawWrappedText(ctx, scene.title, titleX, titleY, titleBlockWidth, titleLineHeight, 2);
+  ctx.restore();
+  ctx.save();
+  const wipeX = titleX + titleBlockWidth * easeOut(p / 0.42);
+  ctx.globalAlpha = 0.9 * (1 - clamp(p / 0.42));
+  ctx.fillStyle = accent;
+  ctx.fillRect(wipeX - width * 0.003, titleY - titleSize * 0.82, width * 0.004, titleLineHeight * 1.9);
+  ctx.restore();
   ctx.shadowBlur = 0;
   ctx.fillStyle = '#e4e0ee';
   ctx.font = `400 ${Math.max(20, width * 0.027)}px Arial, sans-serif`;
-  drawWrappedText(ctx, scene.description, titleX, titleY + titleLines * titleSize * 1.08 + height * 0.025, width * 0.78, Math.max(27, width * 0.034), 3);
+  const descriptionY = titleY + measuredLines * titleLineHeight + height * 0.025;
+  ctx.save();
+  ctx.globalAlpha *= easeOut((p - 0.12) / 0.38);
+  drawWrappedText(ctx, scene.description, titleX, descriptionY + (1 - easeOut((p - 0.12) / 0.38)) * height * 0.018, width * 0.78, Math.max(27, width * 0.034), 3);
+  ctx.restore();
   ctx.restore();
 
   // Progress marker and scene counter.
@@ -231,6 +249,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
 
     let stream: MediaStream | undefined;
     let recorder: MediaRecorder | undefined;
+    let audioContext: AudioContext | undefined;
     try {
       if (scenes.some(scene => !scene.imageUrl)) {
         throw new Error('Сначала найди фотографии для всех сцен — для каждой сцены нужен отдельный визуальный материал.');
@@ -264,6 +283,53 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
       }
 
       stream = canvas.captureStream(30);
+
+      // Generate an original ambient synth bed locally; no external music API or asset required.
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass) {
+        try {
+          audioContext = new AudioContextClass();
+          await audioContext.resume();
+          const destination = audioContext.createMediaStreamDestination();
+          const master = audioContext.createGain();
+          const filter = audioContext.createBiquadFilter();
+          const compressor = audioContext.createDynamicsCompressor();
+          master.gain.value = 0.12;
+          filter.type = 'lowpass';
+          filter.frequency.value = 780;
+          compressor.threshold.value = -22;
+          compressor.ratio.value = 3;
+          master.connect(filter);
+          filter.connect(compressor);
+          compressor.connect(destination);
+          const frequencies = [55, 82.41, 110.0, 164.81];
+          frequencies.forEach((frequency, index) => {
+            const oscillator = audioContext!.createOscillator();
+            const voiceGain = audioContext!.createGain();
+            oscillator.type = index === 0 ? 'sine' : 'triangle';
+            oscillator.frequency.value = frequency;
+            oscillator.detune.value = index % 2 ? 5 : -4;
+            voiceGain.gain.value = index === 0 ? 0.42 : 0.12;
+            oscillator.connect(voiceGain);
+            voiceGain.connect(master);
+            oscillator.start();
+          });
+          // Slow amplitude breathing keeps the generated bed from sounding static.
+          const lfo = audioContext.createOscillator();
+          const lfoGain = audioContext.createGain();
+          lfo.frequency.value = 0.16;
+          lfoGain.gain.value = 0.025;
+          lfo.connect(lfoGain);
+          lfoGain.connect(master.gain);
+          lfo.start();
+          const audioTrack = destination.stream.getAudioTracks()[0];
+          if (audioTrack) stream.addTrack(audioTrack);
+        } catch {
+          audioContext?.close().catch(() => undefined);
+          audioContext = undefined;
+        }
+      }
+
       recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 8_000_000 });
       const chunks: BlobPart[] = [];
       recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
@@ -325,6 +391,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
       setMessage(error instanceof Error ? error.message : 'Не удалось создать видео.');
     } finally {
       stream?.getTracks().forEach(track => track.stop());
+      if (audioContext && audioContext.state !== 'closed') await audioContext.close().catch(() => undefined);
       setRendering(false);
     }
   }
@@ -346,7 +413,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
       )}
       {message && !rendering && <p className="export-message" role="status">{message}</p>}
       {videoUrl && !rendering && <a className="download-video" href={videoUrl} download={fileName}><Download size={16} /> Скачать {fileName.endsWith('.mp4') ? 'MP4' : 'WEBM'}</a>}
-      <p className="export-hint">Экспорт: 720×1280 для 9:16, 1280×720 для 16:9 или 960×960 для 1:1. Фотографии должны разрешать загрузку с Wikimedia Commons. Во время рендеринга не сворачивай Safari. Если файл не скачался автоматически, открой его и выбери «Поделиться» → «Сохранить в Файлы».</p>
+      <p className="export-hint">Экспорт: 720×1280 для 9:16, 1280×720 для 16:9 или 960×960 для 1:1. В видео добавляется оригинальный синтезированный ambient-фон (если браузер поддерживает Web Audio). Фотографии должны разрешать загрузку с Wikimedia Commons. Во время рендеринга не сворачивай Safari. Если файл не скачался автоматически, открой его и выбери «Поделиться» → «Сохранить в Файлы».</p>
     </section>
   );
 }
