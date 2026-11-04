@@ -16,6 +16,7 @@ function drawScene(
   index: number,
   progress: number,
   style: VisualStyle,
+  photo?: HTMLImageElement,
 ) {
   const palettes: Record<VisualStyle, [string, string, string]> = {
     cinematic: ['#100e20', '#30254e', '#b7a2ff'],
@@ -31,8 +32,26 @@ function drawScene(
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, width, height);
 
+  if (photo) {
+    const scale = Math.max(width / photo.naturalWidth, height / photo.naturalHeight);
+    const sw = width / scale;
+    const sh = height / scale;
+    const sx = (photo.naturalWidth - sw) / 2;
+    const sy = (photo.naturalHeight - sh) / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.78;
+    ctx.drawImage(photo, sx, sy, sw, sh, 0, 0, width, height);
+    ctx.restore();
+    const shade = ctx.createLinearGradient(0, 0, 0, height);
+    shade.addColorStop(0, '#080a12aa');
+    shade.addColorStop(0.42, '#080a1210');
+    shade.addColorStop(1, '#080a12ee');
+    ctx.fillStyle = shade;
+    ctx.fillRect(0, 0, width, height);
+  }
+
   ctx.save();
-  ctx.globalAlpha = 0.1;
+  ctx.globalAlpha = photo ? 0.035 : 0.1;
   ctx.strokeStyle = '#d8d1ff';
   ctx.lineWidth = 1;
   const grid = Math.max(32, Math.round(width / 24));
@@ -130,6 +149,15 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
       if (!('MediaRecorder' in window) || !HTMLCanvasElement.prototype.captureStream) {
         throw new Error('Запись видео не поддерживается этим браузером. Обнови Safari и попробуй ещё раз.');
       }
+      const loadedPhotos = await Promise.all(scenes.map(scene => new Promise<HTMLImageElement | undefined>(resolve => {
+        if (!scene.imageUrl) return resolve(undefined);
+        const image = new Image();
+        image.crossOrigin = 'anonymous';
+        image.onload = () => resolve(image);
+        image.onerror = () => resolve(undefined);
+        image.src = scene.imageUrl;
+      })));
+      setMessage('Фотографии загружены. Подготавливаем видео…');
       const dimensions = ratio === '9:16' ? [720, 1280] : ratio === '16:9' ? [1280, 720] : [960, 960];
       const canvas = document.createElement('canvas');
       canvas.width = dimensions[0];
@@ -169,7 +197,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
             }
             const current = scenes[sceneIndex];
             const local = Math.min(1, Math.max(0, (elapsed - sceneStart) / Math.max(1, current.duration)));
-            drawScene(ctx, canvas.width, canvas.height, current, sceneIndex, local, style);
+            drawScene(ctx, canvas.width, canvas.height, current, sceneIndex, local, style, loadedPhotos[sceneIndex]);
             setProgress(Math.round(elapsed / totalDuration * 100));
             if (elapsed >= totalDuration) resolve();
             else requestAnimationFrame(frame);
@@ -203,7 +231,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
     <section className="export-panel">
       <div className="export-copy">
         <div className="export-icon"><Film size={19} /></div>
-        <div><strong>Сборка видео</strong><p>Анимированные сцены · {ratio} · рендеринг в браузере</p></div>
+        <div><strong>Сборка видео</strong><p>Фотографии сцен + анимация · {ratio}</p></div>
       </div>
       {rendering ? (
         <div className="render-progress">
@@ -216,7 +244,7 @@ export default function VideoExport({ scenes, ratio, style }: VideoExportProps) 
       )}
       {message && !rendering && <p className="export-message" role="status">{message}</p>}
       {videoUrl && !rendering && <a className="download-video" href={videoUrl} download={fileName}><Download size={16} /> Скачать {fileName.endsWith('.mp4') ? 'MP4' : 'WEBM'}</a>}
-      <p className="export-hint">Пока экспортируется видео без озвучки. Во время рендеринга не сворачивай Safari. Если загрузка не начнётся, открой видео и выбери «Поделиться» → «Сохранить в Файлы».</p>
+      <p className="export-hint">Видео собирается с найденными фотографиями, если они добавлены. Озвучки пока нет. Во время рендеринга не сворачивай Safari. Если загрузка не начнётся, открой видео и выбери «Поделиться» → «Сохранить в Файлы».</p>
     </section>
   );
 }
