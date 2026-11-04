@@ -45,3 +45,9 @@ textarea{width:100%;resize:vertical;min-height:145px;border:1px solid #303647;ba
 .media-library-footer button{display:flex;align-items:center;gap:6px;padding:9px 11px;border:1px solid #6f5eae;border-radius:7px;background:#241e39;color:#e4dcff;font-size:9px;font-weight:700;white-space:nowrap}
 .media-library-footer button:disabled{opacity:.5}
 @media(max-width:650px){.media-library{padding:12px}.media-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.media-card img,.media-placeholder{height:125px}.media-library-footer{align-items:flex-start;flex-direction:column}.media-library-footer button{width:100%;justify-content:center}}
+
+
+/* The old mock preview is intentionally removed from the editor. */
+.editor-grid-single{display:block;grid-template-columns:minmax(0,1fr)}
+.editor-grid-single .prompt-panel{max-width:none}
+.preview-panel{display:none!important}
