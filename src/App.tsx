@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Aperture, ArrowDownToLine, Check, ChevronDown, Clapperboard, Clock3, Film, Layers3, Plus, Ratio, Settings2, Sparkles, WandSparkles } from 'lucide-react';
 import Preview from './components/Preview';
 import VideoExport from './components/VideoExport';
+import MediaLibrary from './components/MediaLibrary';
 import { createStoryboard } from './lib/storyboard';
 import type { AspectRatio, Scene, VideoSettings, VisualStyle } from './types';
 
@@ -81,6 +82,7 @@ export default function App() {
           </div>
 
           <section className="scenes-section">
+            <MediaLibrary scenes={scenes} onUpdate={(id, media) => setScenes(current => current.map(scene => scene.id === id ? { ...scene, ...media } : scene))} />
             <div className="scenes-heading"><div><span className="eyebrow">ШАГ 02</span><h2>Сцены проекта <span className="muted">({scenes.length})</span></h2></div><button className="subtle-button" onClick={exportConcept}><ArrowDownToLine size={15} /> Экспорт структуры</button></div>
             <div className="scene-list">{scenes.map((scene, index) => <button className={activeScene === index ? 'scene-row scene-selected' : 'scene-row'} key={scene.id} onClick={() => setActiveScene(index)}><span className="scene-index">0{scene.id}</span><span className="scene-info"><strong>{scene.title}</strong><small>{scene.description}</small></span><span className="scene-time"><Clock3 size={13} /> {scene.duration} сек.</span><span className="scene-check">{activeScene === index ? <Check size={15} /> : <Plus size={15} />}</span></button>)}</div>
             <VideoExport scenes={scenes} ratio={settings.aspectRatio} style={settings.style} />
