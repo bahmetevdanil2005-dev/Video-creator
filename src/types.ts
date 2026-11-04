@@ -15,4 +15,8 @@ export interface Scene {
   duration: number;
   visual: string;
   accent: string;
+  imageUrl?: string;
+  imageTitle?: string;
+  imagePage?: string;
+  imageCredit?: string;
 }
