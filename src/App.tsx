@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Aperture, ArrowDownToLine, Check, ChevronDown, Clapperboard, Clock3, Film, Layers3, Plus, Ratio, Settings2, Sparkles, WandSparkles } from 'lucide-react';
-import Preview from './components/Preview';
 import VideoExport from './components/VideoExport';
 import MediaLibrary from './components/MediaLibrary';
 import { createStoryboard } from './lib/storyboard';
@@ -58,7 +57,7 @@ export default function App() {
         <section className="main-content">
           <div className="page-intro"><div><div className="eyebrow">AI MOTION WORKFLOW</div><h1>Создай своё видео</h1><p>Опиши идею. Подготовим структуру сцен и визуальную концепцию.</p></div><span className="draft-chip"><span /> Черновик проекта</span></div>
 
-          <div className="editor-grid">
+          <div className="editor-grid editor-grid-single">
             <section className="prompt-panel">
               <div className="panel-heading"><div><span className="eyebrow">ШАГ 01</span><h2>Опиши своё видео</h2></div><WandSparkles size={20} className="heading-icon" /></div>
               <label className="field-label" htmlFor="video-prompt">ТВОЯ ИДЕЯ</label>
@@ -77,8 +76,6 @@ export default function App() {
               <button className="generate-button" onClick={generate}><Sparkles size={17} /> Создать раскадровку <span>→</span></button>
               {notice && <div className="notice" role="status"><Check size={14} /> {notice}</div>}
             </section>
-
-            <Preview scenes={scenes} ratio={settings.aspectRatio} activeScene={activeScene} onSelectScene={setActiveScene} />
           </div>
 
           <section className="scenes-section">
